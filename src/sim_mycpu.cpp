@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <thread>
 #include <csignal>
+#include <cstdlib>
 #include <sstream>
 
 void connect_wire(axi4_ptr <32,32,4> &mmio_ptr, Vmycpu_top *top) {
@@ -65,10 +66,12 @@ bool cond_trace_on = false;
 bool trace_pc = false;
 bool confreg_uart = false;
 bool perf_stat = false;
-long sim_time = 1e3;
+long sim_time_begin = 0;
+long sim_time_end = 1e3;
 bool diff_uart = false;
 bool trace_start = false;
 long trace_start_time = 0;
+long delay = 0;
 
 unsigned int *pc;
 
@@ -86,77 +89,13 @@ void uart_input(uart8250 &uart) {
     }
 }
 
-void system_test(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
+bool func_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, uint32_t delay) {
     axi4     <32,32,4> mmio_sigs;
     axi4_ref <32,32,4> mmio_sigs_ref(mmio_sigs);
-    axi4_xbar<32,32,4> mmio;
-
-    // uart8250 at 0x1fe40000 (APB)
-    uart8250 uart;
-    std::thread *uart_input_thread = new std::thread(uart_input,std::ref(uart));
-    assert(mmio.add_dev(0x1fe40000,0x10000,&uart));
-
-    // SPI Flash as memory at 0x1fc00000
-    mmio_mem spi_flash(0x100000, "../supervisor-mips32/kernel/kernel.bin");
-    assert(mmio.add_dev(0x1fc00000,0x100000,&spi_flash));
-
-    // DRAM(128M) at 0x00000000
-    mmio_mem dram(0x8000000);
-    assert(mmio.add_dev(0x0,0x8000000,&dram));
-
-    // connect Vcd for trace
-    VerilatedVcdC vcd;
-    if (trace_on) {
-        top->trace(&vcd,0);
-        vcd.open("trace.vcd");
-    }
-
-    // init and run
-    top->aresetn = 0;
-    unsigned long ticks = 0;
-    while (!Verilated::gotFinish() && sim_time > 0 && running) {
-        top->eval();
-        ticks ++;
-        if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
-        if (trace_on) {
-            vcd.dump(ticks);
-            sim_time --;
-        }
-        if (ticks == 9) top->aresetn = 1;
-        top->aclk = 1;
-        // posedge
-        mmio_sigs.update_input(mmio_ref);
-        top->eval();
-        ticks ++;
-        if (top->aresetn) {
-            mmio.beat(mmio_sigs_ref);
-            while (uart.exist_tx()) {
-                char c = uart.getc();
-                printf("%c",c);
-                fflush(stdout);
-            }
-        }
-        mmio_sigs.update_output(mmio_ref);
-        if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
-        if (trace_on) {
-            vcd.dump(ticks);
-            sim_time --;
-        }
-        top->ext_int = uart.irq() << 2;
-        top->aclk = 0;
-    }
-    if (trace_on) vcd.close();
-    top->final();
-    pthread_kill(uart_input_thread->native_handle(),SIGKILL);
-}
-
-void func_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
-    axi4     <32,32,4> mmio_sigs;
-    axi4_ref <32,32,4> mmio_sigs_ref(mmio_sigs);
-    axi4_xbar<32,32,4> mmio(23);
+    axi4_xbar<32,32,4> mmio(delay);
 
     // func mem at 0x1fc00000 and 0x0
-    mmio_mem perf_mem(262144*4, "../nscscc-group/func_test_v0.01/soft/func/obj/main.bin");
+    mmio_mem perf_mem(262144*4, "/home/haooops/Documents/soc-simulator/main.bin");
     perf_mem.set_allow_warp(true);
     assert(mmio.add_dev(0x1fc00000,0x100000,&perf_mem));
     assert(mmio.add_dev(0x00000000,0x10000000,&perf_mem));
@@ -166,7 +105,7 @@ void func_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
 
     // confreg at 0x1faf0000
     nscscc_confreg confreg(true);
-    confreg.set_trace_file("../nscscc-group/func_test_v0.01/cpu132_gettrace/golden_trace.txt");
+    confreg.set_trace_file("/home/haooops/Documents/soc-simulator/golden_trace.txt");
     assert(mmio.add_dev(0x1faf0000,0x10000,&confreg));
 
     // connect Vcd for trace
@@ -178,12 +117,14 @@ void func_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
 
     // init and run
     top->aresetn = 0;
-    unsigned long ticks = 0;
-    unsigned long rst_ticks = 1000;
-    unsigned long last_commit = 0;
-    unsigned long commit_timeout = 5000;
+    uint64_t ticks = 0;
+    uint64_t rst_ticks = 1000;
+    uint64_t last_commit = 0;
+    uint64_t commit_timeout = 5000;
+    uint64_t cont = 50;
+    uint64_t error = false;
     int test_point = 0;
-    while (!Verilated::gotFinish() && sim_time > 0 && running) {
+    while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
         if (rst_ticks  > 0) {
             top->aresetn = 0;
             rst_ticks --;
@@ -202,12 +143,19 @@ void func_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
                 printf("Number %d Functional Test Point PASS!\n", test_point>>24);
             }
         }
-        running = confreg.do_trace(top->debug_wb_pc,top->debug_wb_rf_wen,top->debug_wb_rf_wnum,top->debug_wb_rf_wdata);
+        if (top->aclk && top->aresetn && !error) {
+            error = !confreg.do_trace(top->debug_wb_pc,top->debug_wb_rf_wen,top->debug_wb_rf_wnum,top->debug_wb_rf_wdata);
+        }
+        if (error && (cont-- == 0)) {
+            running = false;
+        }
         if (top->debug_wb_pc == 0xbfc00100u) running = false;
         if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
         if (trace_on) {
-            vcd.dump(ticks);
-            sim_time --;
+            if (ticks >= sim_time_begin) {
+                vcd.dump(ticks);
+            }
+            sim_time_end --;
         }
         if (ticks - last_commit >= commit_timeout) {
             printf("ERROR: There are %lu cycles since last commit\n", commit_timeout);
@@ -218,15 +166,16 @@ void func_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
     }
     if (trace_on) vcd.close();
     top->final();
+    return error;
 }
 
 void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1, int test_end = 10) {
     axi4     <32,32,4> mmio_sigs;
     axi4_ref <32,32,4> mmio_sigs_ref(mmio_sigs);
-    axi4_xbar<32,32,4> mmio(23);
+    axi4_xbar<32,32,4> mmio(0);
 
     // perf mem at 0x1fc00000
-    mmio_mem perf_mem(262144*4, "../nscscc-group/perf_test_v0.01/soft/perf_func/obj/allbench/inst_data.bin");
+    mmio_mem perf_mem(262144*4, "/home/haooops/Documents/soc-simulator/inst_data.bin");
     assert(mmio.add_dev(0x1fc00000,0x100000,&perf_mem));
 
     // confreg at 0x1faf0000
@@ -238,7 +187,7 @@ void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1,
     if (trace_on) {
         top->trace(&vcd,0);
     }
-    unsigned long ticks = 0;
+    uint64_t ticks = 0;
     uint32_t last_wb_pc[2] = {0,0};
     uint32_t cur_wb_pc[2] = {0,0};
     // init and run
@@ -249,14 +198,14 @@ void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1,
         std::stringstream ss;
         ss << "trace-perf-" << test << ".vcd";
         if (trace_on) vcd.open(ss.str().c_str());
-        unsigned long rst_ticks = 1000;
+        uint64_t rst_ticks = 1000;
         // dual-issue-statistic {
-        unsigned long total_clk = 0;
-        unsigned long stall_clk = 0;
-        unsigned long dual_commit = 0;
-        unsigned long has_commit = 0;
+        uint64_t total_clk = 0;
+        uint64_t stall_clk = 0;
+        uint64_t dual_commit = 0;
+        uint64_t has_commit = 0;
         // dual-issue-statistic }
-        while (!Verilated::gotFinish() && sim_time > 0 && running) {
+        while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
             if (rst_ticks  > 0) {
                 top->aresetn = 0;
                 rst_ticks --;
@@ -276,7 +225,7 @@ void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1,
             if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
             if (trace_on) {
                 vcd.dump(ticks);
-                sim_time --;
+                sim_time_end --;
             }
             // dual-issue-statistic {
             cur_wb_pc[top->aclk] = top->debug_wb_pc;
@@ -1088,13 +1037,14 @@ int main(int argc, char** argv, char** env) {
         if (strcmp(argv[i],"-trace") == 0) {
             trace_on = true;
             if (i+1 < argc) {
-                sscanf(argv[++i],"%lu",&sim_time);
+                sscanf(argv[++i],"%lu",&sim_time_begin);
+                sscanf(argv[++i],"%lu",&sim_time_end);
             }
         }
         else if (strcmp(argv[i],"-condtrace") == 0) {
             cond_trace_on = true;
             if (i+1 < argc) {
-                sscanf(argv[++i],"%lu",&sim_time);
+                sscanf(argv[++i],"%lu",&sim_time_end);
             }
         }
         else if (strcmp(argv[i],"-starttrace") == 0) {
@@ -1102,6 +1052,11 @@ int main(int argc, char** argv, char** env) {
             trace_start = true;
             if (i+1 < argc) {
                 sscanf(argv[++i],"%lu",&trace_start_time);
+            }
+        }
+        else if (strcmp(argv[i],"-setdelay") == 0) {
+            if (i+1 < argc) {
+                sscanf(argv[++i],"%lu",&delay);
             }
         }
         else if (strcmp(argv[i],"-pc") == 0) {
@@ -1173,7 +1128,7 @@ int main(int argc, char** argv, char** env) {
             system_test(top, mmio_ref);
             break;
         case FUNC:
-            func_run(top, mmio_ref);
+            func_run(top, mmio_ref, delay);
             break;
         case PERF:
             if (trace_on && perf_start != perf_end) {
