@@ -159,7 +159,7 @@ bool func_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, uint32_t delay) {
     axi4_xbar<32,32,4> mmio(delay);
 
     // func mem at 0x1fc00000 and 0x0
-    mmio_mem perf_mem(262144*4, "/home/haooops/Documents/soc-simulator/main.bin");
+    mmio_mem perf_mem(262144*4, "/home/haooops/Documents/soc-simulator/test/func/main.bin");
     perf_mem.set_allow_warp(true);
     assert(mmio.add_dev(0x1fc00000,0x100000,&perf_mem));
     assert(mmio.add_dev(0x00000000,0x10000000,&perf_mem));
@@ -169,7 +169,7 @@ bool func_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, uint32_t delay) {
 
     // confreg at 0x1faf0000
     nscscc_confreg confreg(true);
-    confreg.set_trace_file("/home/haooops/Documents/soc-simulator/golden_trace.txt");
+    confreg.set_trace_file("/home/haooops/Documents/soc-simulator/test/func/golden_trace.txt");
     assert(mmio.add_dev(0x1faf0000,0x10000,&confreg));
 
     // connect Vcd for trace
@@ -239,7 +239,7 @@ void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1,
     axi4_xbar<32,32,4> mmio(0);
 
     // perf mem at 0x1fc00000
-    mmio_mem perf_mem(262144*4, "/home/haooops/Documents/soc-simulator/inst_data.bin");
+    mmio_mem perf_mem(262144*4, "/home/haooops/Documents/soc-simulator/test/perf/inst_data.bin");
     assert(mmio.add_dev(0x1fc00000,0x100000,&perf_mem));
 
     // confreg at 0x1faf0000
