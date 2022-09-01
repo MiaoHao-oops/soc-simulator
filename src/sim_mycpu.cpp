@@ -117,13 +117,13 @@ void system_test(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
     // init and run
     top->aresetn = 0;
     unsigned long ticks = 0;
-    while (!Verilated::gotFinish() && sim_time > 0 && running) {
+    while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
         top->eval();
         ticks ++;
         if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
         if (trace_on) {
             vcd.dump(ticks);
-            sim_time --;
+            sim_time_end --;
         }
         if (ticks == 9) top->aresetn = 1;
         top->aclk = 1;
@@ -143,7 +143,7 @@ void system_test(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
         if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
         if (trace_on) {
             vcd.dump(ticks);
-            sim_time --;
+            sim_time_end --;
         }
         top->ext_int = uart.irq() << 2;
         top->aclk = 0;
@@ -409,7 +409,7 @@ void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1,
 //         unsigned long last_commit = ticks;
 //         unsigned long commit_timeout = 5000;
 //         cemu_mips.reset();
-//         while (!Verilated::gotFinish() && sim_time > 0 && running) {
+//         while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
 //             if (rst_ticks  > 0) {
 //                 top->aresetn = 0;
 //                 rst_ticks --;
@@ -429,7 +429,7 @@ void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1,
 //             if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
 //             if (trace_on) {
 //                 vcd.dump(ticks);
-//                 sim_time --;
+//                 sim_time_end --;
 //             }
 //             // trace with cemu {
 //             if (top->debug_wb_rf_wen && top->debug_wb_rf_wnum) {
@@ -523,7 +523,7 @@ void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1,
 //     unsigned long commit_timeout = 5000;
 //     cemu_mips.reset();
 
-//     while (!Verilated::gotFinish() && sim_time > 0 && running) {
+//     while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
 //         if (rst_ticks  > 0) {
 //             top->aresetn = 0;
 //             rst_ticks --;
@@ -545,7 +545,7 @@ void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1,
 //         if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
 //         if (trace_on) {
 //             vcd.dump(ticks);
-//             sim_time --;
+//             sim_time_end --;
 //         }
 //         // trace with cemu {
 //         if (top->debug_wb_rf_wen && top->debug_wb_rf_wnum) {
@@ -622,13 +622,13 @@ void ucore_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
     // init and run
     top->aresetn = 0;
     unsigned long ticks = 0;
-    while (!Verilated::gotFinish() && sim_time > 0 && running) {
+    while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
         top->eval();
         ticks ++;
         if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
         if (trace_on) {
             vcd.dump(ticks);
-            sim_time --;
+            sim_time_end --;
         }
         if (ticks == 9) top->aresetn = 1;
         top->aclk = 1;
@@ -659,7 +659,7 @@ void ucore_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
         }
         if (trace_on) {
             vcd.dump(ticks);
-            sim_time --;
+            sim_time_end --;
         }
         top->ext_int = uart.irq() << 1;
         top->aclk = 0;
@@ -705,13 +705,13 @@ void uboot_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
     // init and run
     top->aresetn = 0;
     unsigned long ticks = 0;
-    while (!Verilated::gotFinish() && sim_time > 0 && running) {
+    while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
         top->eval();
         ticks ++;
         if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
         if (trace_on) {
             vcd.dump(ticks);
-            sim_time --;
+            sim_time_end --;
         }
         if (ticks == 9) top->aresetn = 1;
         top->aclk = 1;
@@ -742,7 +742,7 @@ void uboot_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
         }
         if (trace_on) {
             vcd.dump(ticks);
-            sim_time --;
+            sim_time_end --;
         }
         top->ext_int = uart.irq() << 1;
         top->aclk = 0;
@@ -791,13 +791,13 @@ void linux_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
     // init and run
     top->aresetn = 0;
     unsigned long ticks = 0;
-    while (!Verilated::gotFinish() && sim_time > 0 && running) {
+    while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
         top->eval();
         ticks ++;
         if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
         if (trace_on) {
             vcd.dump(ticks);
-            sim_time --;
+            sim_time_end --;
         }
         if (ticks == 9) top->aresetn = 1;
         top->aclk = 1;
@@ -829,7 +829,7 @@ void linux_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
         }
         if (trace_on) {
             vcd.dump(ticks);
-            sim_time --;
+            sim_time_end --;
         }
         top->ext_int = uart.irq() << 2;
         top->aclk = 0;
@@ -889,7 +889,7 @@ void linux_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
 //     cemu_mips.jump(0x80100000);
 //     cemu_mips.set_difftest_mode(true);
 
-//     while (!Verilated::gotFinish() && sim_time > 0 && running) {
+//     while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
 //         if (rst_ticks  > 0) {
 //             top->aresetn = 0;
 //             rst_ticks --;
@@ -910,7 +910,7 @@ void linux_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
 //         if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
 //         if (trace_on) {
 //             vcd.dump(ticks);
-//             sim_time --;
+//             sim_time_end --;
 //         }
 //         // trace with cemu {
 //         if (top->debug_commit) {
@@ -999,7 +999,7 @@ void linux_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
 //     cemu_mips.jump(0x80000000);
 //     cemu_mips.set_difftest_mode(true);
 
-//     while (!Verilated::gotFinish() && sim_time > 0 && running) {
+//     while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
 //         if (rst_ticks  > 0) {
 //             top->aresetn = 0;
 //             rst_ticks --;
@@ -1020,7 +1020,7 @@ void linux_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
 //         if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
 //         if (trace_on) {
 //             vcd.dump(ticks);
-//             sim_time --;
+//             sim_time_end --;
 //         }
 //         // trace with cemu {
 //         if (top->debug_commit) {
