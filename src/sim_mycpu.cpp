@@ -264,10 +264,10 @@ void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1,
         if (trace_on) vcd.open(ss.str().c_str());
         uint64_t rst_ticks = 1000;
         // dual-issue-statistic {
-        uint64_t total_clk = 0;
-        uint64_t stall_clk = 0;
-        uint64_t dual_commit = 0;
-        uint64_t has_commit = 0;
+        // uint64_t total_clk = 0;
+        // uint64_t stall_clk = 0;
+        // uint64_t dual_commit = 0;
+        // uint64_t has_commit = 0;
         // dual-issue-statistic }
         while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
             if (rst_ticks  > 0) {
@@ -292,31 +292,31 @@ void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1,
                 sim_time_end --;
             }
             // dual-issue-statistic {
-            cur_wb_pc[top->aclk] = top->debug_wb_pc;
-            if (!top->aclk) {
-                total_clk ++;
-                bool is_stall = false;
-                if (last_wb_pc[0] == cur_wb_pc[0] && last_wb_pc[1] == cur_wb_pc[1]) {
-                    // pipeline stall
-                    is_stall = true;
-                }
-                if (is_stall) stall_clk ++;
-                else {
-                    if (cur_wb_pc[1]) { // master
-                        has_commit ++;
-                        if (cur_wb_pc[0]) dual_commit ++;
-                    }
-                }
-                last_wb_pc[0] = cur_wb_pc[0];
-                last_wb_pc[1] = cur_wb_pc[1];
-            }
+            // cur_wb_pc[top->aclk] = top->debug_wb_pc;
+            // if (!top->aclk) {
+            //     total_clk ++;
+            //     bool is_stall = false;
+            //     if (last_wb_pc[0] == cur_wb_pc[0] && last_wb_pc[1] == cur_wb_pc[1]) {
+            //         // pipeline stall
+            //         is_stall = true;
+            //     }
+            //     if (is_stall) stall_clk ++;
+            //     else {
+            //         if (cur_wb_pc[1]) { // master
+            //             has_commit ++;
+            //             if (cur_wb_pc[0]) dual_commit ++;
+            //         }
+            //     }
+            //     last_wb_pc[0] = cur_wb_pc[0];
+            //     last_wb_pc[1] = cur_wb_pc[1];
+            // }
             // dual-issue-statistic }
             ticks ++;
         }
         if (trace_on) vcd.close();
         printf("%x\n",confreg.get_num());
         if (perf_stat) {
-            printf("total_clk = %lu, stall_clk = %lu, has_commit = %lu, dual_commit = %lu, dual_issue_rate = %0.5lf, IPC = %0.5lf\n", total_clk, stall_clk, has_commit, dual_commit, (double)dual_commit / has_commit, (double)(has_commit + dual_commit) / total_clk);
+            // printf("total_clk = %lu, stall_clk = %lu, has_commit = %lu, dual_commit = %lu, dual_issue_rate = %0.5lf, IPC = %0.5lf\n", total_clk, stall_clk, has_commit, dual_commit, (double)dual_commit / has_commit, (double)(has_commit + dual_commit) / total_clk);
             // printf("confreg_read: %d, confreg_write: %d\n", confreg.confreg_read, confreg.confreg_write);
             confreg.confreg_read = 0;
             confreg.confreg_write = 0;
@@ -358,126 +358,144 @@ void perf_run(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1,
 //     }
 // }
 
-// void cemu_perf_diff(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1, int test_end = 10) {
-//     // cemu {
-//     memory_bus cemu_mmio;
+void cemu_perf_diff(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref, int test_start = 1, int test_end = 10) {
+    // cemu {
+    memory_bus cemu_mmio;
     
-//     mmio_mem cemu_func_mem(262144*4, "../nscscc-group/perf_test_v0.01/soft/perf_func/obj/allbench/inst_data.bin");
-//     cemu_func_mem.set_allow_warp(true);
-//     assert(cemu_mmio.add_dev(0x1fc00000,0x100000  ,&cemu_func_mem));
-//     assert(cemu_mmio.add_dev(0x00000000,0x10000000,&cemu_func_mem));
-//     assert(cemu_mmio.add_dev(0x20000000,0x20000000,&cemu_func_mem));
-//     assert(cemu_mmio.add_dev(0x40000000,0x40000000,&cemu_func_mem));
-//     assert(cemu_mmio.add_dev(0x80000000,0x80000000,&cemu_func_mem));
+    mmio_mem cemu_func_mem(262144*4, "/home/haooops/Documents/soc-simulator/test/perf/inst_data.bin");
+    cemu_func_mem.set_allow_warp(true);
+    assert(cemu_mmio.add_dev(0x1fc00000,0x100000  ,&cemu_func_mem));
+    assert(cemu_mmio.add_dev(0x00000000,0x10000000,&cemu_func_mem));
+    assert(cemu_mmio.add_dev(0x20000000,0x20000000,&cemu_func_mem));
+    assert(cemu_mmio.add_dev(0x40000000,0x40000000,&cemu_func_mem));
+    assert(cemu_mmio.add_dev(0x80000000,0x80000000,&cemu_func_mem));
 
-//     nscscc_confreg cemu_confreg(false);
-//     assert(cemu_mmio.add_dev(0x1faf0000,0x10000,&cemu_confreg));
+    nscscc_confreg cemu_confreg(false);
+    assert(cemu_mmio.add_dev(0x1faf0000,0x10000,&cemu_confreg));
 
-//     mips_core cemu_mips(cemu_mmio);
-//     // cemu }
+    mips_core cemu_mips(cemu_mmio);
+    // cemu }
 
-//     // rtl soc-simulator {
-//     axi4     <32,32,4> mmio_sigs;
-//     axi4_ref <32,32,4> mmio_sigs_ref(mmio_sigs);
-//     axi4_xbar<32,32,4> mmio(23);
+    // rtl soc-simulator {
+    axi4     <32,32,4> mmio_sigs;
+    axi4_ref <32,32,4> mmio_sigs_ref(mmio_sigs);
+    axi4_xbar<32,32,4> mmio(23);
 
-//     // perf mem at 0x1fc00000
-//     mmio_mem perf_mem(262144*4, "../nscscc-group/perf_test_v0.01/soft/perf_func/obj/allbench/inst_data.bin");
-//     assert(mmio.add_dev(0x1fc00000,0x100000,&perf_mem));
+    // perf mem at 0x1fc00000
+    mmio_mem perf_mem(262144*4, "/home/haooops/Documents/soc-simulator/test/perf/inst_data.bin");
+    assert(mmio.add_dev(0x1fc00000,0x100000,&perf_mem));
 
-//     // confreg at 0x1faf0000
-//     nscscc_confreg confreg(false);
-//     assert(mmio.add_dev(0x1faf0000,0x10000,&confreg));
+    // confreg at 0x1faf0000
+    nscscc_confreg confreg(false);
+    assert(mmio.add_dev(0x1faf0000,0x10000,&confreg));
     
-//     // connect Vcd for trace
-//     VerilatedVcdC vcd;
-//     if (trace_on) {
-//         top->trace(&vcd,0);
-//     }
-//     unsigned long ticks = 0;
-//     // rtl soc-simulator }
+    // connect Vcd for trace
+    VerilatedVcdC vcd;
+    if (trace_on) {
+        top->trace(&vcd,0);
+    }
+    unsigned long ticks = 0;
+    // rtl soc-simulator }
 
-//     for (int test=test_start;test<=test_end;test++) {
-//         running = true;
-//         confreg.set_switch(test);
-//         cemu_confreg.set_switch(test);
-//         top->aresetn = 0;
-//         std::stringstream ss;
-//         ss << "trace-perf-" << test << ".vcd";
-//         if (trace_on) vcd.open(ss.str().c_str());
-//         unsigned long rst_ticks = 1000;
-//         unsigned long last_commit = ticks;
-//         unsigned long commit_timeout = 5000;
-//         cemu_mips.reset();
-//         while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
-//             if (rst_ticks  > 0) {
-//                 top->aresetn = 0;
-//                 rst_ticks --;
-//                 mmio.reset();
-//             }
-//             else top->aresetn = 1;
-//             top->aclk = !top->aclk;
-//             if (top->aclk && top->aresetn) mmio_sigs.update_input(mmio_ref);
-//             top->eval();
-//             if (top->aclk && top->aresetn) {
-//                 confreg.tick();
-//                 mmio.beat(mmio_sigs_ref);
-//                 mmio_sigs.update_output(mmio_ref);
-//                 while (confreg_uart && confreg.has_uart()) printf("%c",confreg.get_uart());
-//             }
-//             if (top->debug_wb_pc == 0xbfc00100u) running = false;
-//             if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
-//             if (trace_on) {
-//                 vcd.dump(ticks);
-//                 sim_time_end --;
-//             }
-//             // trace with cemu {
-//             if (top->debug_wb_rf_wen && top->debug_wb_rf_wnum) {
-//                 do {
-//                     cemu_mips.step();
-//                     cemu_confreg.tick();
-//                 } while(!(cemu_mips.debug_wb_wen && cemu_mips.debug_wb_wnum));
-//                 if ( cemu_mips.debug_wb_pc    != top->debug_wb_pc      || 
-//                      cemu_mips.debug_wb_wnum  != top->debug_wb_rf_wnum ||
-//                     (cemu_mips.debug_wb_wdata != top->debug_wb_rf_wdata && !cemu_mips.debug_wb_is_timer)
-//                 ) {
-//                     printf("Error!\n");
-//                     printf("reference: PC = 0x%08x, wb_rf_wnum = 0x%02x, wb_rf_wdata = 0x%08x\n", cemu_mips.debug_wb_pc, cemu_mips.debug_wb_wnum, cemu_mips.debug_wb_wdata);
-//                     printf("mycpu    : PC = 0x%08x, wb_rf_wnum = 0x%02x, wb_rf_wdata = 0x%08x\n", top->debug_wb_pc, top->debug_wb_rf_wnum, top->debug_wb_rf_wdata);
-//                     running = false;
-//                 }
-//                 else {
-//                     if (cemu_mips.debug_wb_is_timer) {
-//                         cemu_mips.set_GPR(cemu_mips.debug_wb_wnum, top->debug_wb_rf_wdata);
-//                     }
-//                     // printf("OK!\n");
-//                     // printf("reference: PC = 0x%08x, wb_rf_wnum = 0x%02x, wb_rf_wdata = 0x%08x\n", cemu_mips.debug_wb_pc, cemu_mips.debug_wb_wnum, cemu_mips.debug_wb_wdata);
-//                     // printf("mycpu    : PC = 0x%08x, wb_rf_wnum = 0x%02x, wb_rf_wdata = 0x%08x\n", top->debug_wb_pc, top->debug_wb_rf_wnum, top->debug_wb_rf_wdata);
-//                 }
-//                 last_commit = ticks;
-//             }
-//             if (ticks - last_commit >= commit_timeout) {
-//                 printf("ERROR: There are %lu cycles since last commit\n", commit_timeout);
-//                 running = false;
-//             }
-//             while (diff_uart && confreg.has_uart() && cemu_confreg.has_uart()) {
-//                 char mycpu_uart = confreg.get_uart();
-//                 char ref_uart = cemu_confreg.get_uart();
-//                 if (mycpu_uart != ref_uart) {
-//                     printf("ERROR!\n UART different at %lu ticks.\n", ticks);
-//                     printf("Expected: %08x, found: %08x\n", mycpu_uart, ref_uart);
-//                     running = false;
-//                 }
-//             }
-//             // trace with cemu }
-//             ticks ++;
-//         }
-//         if (trace_on) vcd.close();
-//         printf("%x\n",confreg.get_num());
-//     }
-//     top->final();
-//     printf("total ticks = %lu\n", ticks);
-// }
+    for (int test=test_start;test<=test_end;test++) {
+        running = true;
+        confreg.set_switch(test);
+        cemu_confreg.set_switch(test);
+        top->aresetn = 0;
+        std::stringstream ss;
+        ss << "trace-perf-" << test << ".vcd";
+        if (trace_on) vcd.open(ss.str().c_str());
+        unsigned long rst_ticks = 10;
+        unsigned long last_commit = ticks;
+        unsigned long commit_timeout = 5000;
+        cemu_mips.reset();
+        while (!Verilated::gotFinish() && sim_time_end > 0 && running) {
+            if (rst_ticks  > 0) {
+                top->aresetn = 0;
+                rst_ticks --;
+                mmio.reset();
+            }
+            else top->aresetn = 1;
+            top->aclk = !top->aclk;
+            if (top->aclk && top->aresetn) mmio_sigs.update_input(mmio_ref);
+            top->eval();
+            if (top->aclk && top->aresetn) {
+                confreg.tick();
+                mmio.beat(mmio_sigs_ref);
+                mmio_sigs.update_output(mmio_ref);
+                while (confreg_uart && confreg.has_uart()) printf("%c",confreg.get_uart());
+            }
+            if (top->debug_wb_pc == 0xbfc00100u) running = false;
+            if (trace_pc && top->debug_wb_rf_wen) printf("pc = %lx\n", top->debug_wb_pc);
+            if (trace_on) {
+                vcd.dump(ticks);
+                sim_time_end --;
+            }
+            // trace with cemu {
+            if (top->debug_wb_rf_wen && top->debug_wb_rf_wnum && top->aclk && top->aresetn) {
+                do {
+                    cemu_mips.step();
+                    cemu_confreg.tick();
+                } while(!(cemu_mips.debug_wb_wen && cemu_mips.debug_wb_wnum));
+                if ( cemu_mips.debug_wb_pc    != top->debug_wb_pc      || 
+                     cemu_mips.debug_wb_wnum  != top->debug_wb_rf_wnum ||
+                    (cemu_mips.debug_wb_wdata != top->debug_wb_rf_wdata && !cemu_mips.debug_wb_is_timer)
+                ) {
+                    printf("Error!\n");
+                    printf("reference: PC = 0x%08x, wb_rf_wnum = 0x%02x, wb_rf_wdata = 0x%08x\n", cemu_mips.debug_wb_pc, cemu_mips.debug_wb_wnum, cemu_mips.debug_wb_wdata);
+                    printf("mycpu    : PC = 0x%08x, wb_rf_wnum = 0x%02x, wb_rf_wdata = 0x%08x\n", top->debug_wb_pc, top->debug_wb_rf_wnum, top->debug_wb_rf_wdata);
+                    printf("ticks = %d\n", ticks);
+                    running = false;
+                    for (int i = 0; i < 1000; i++) {
+                        ticks++;
+                        top->aresetn = 1;
+                        top->aclk = !top->aclk;
+                        if (top->aclk && top->aresetn) mmio_sigs.update_input(mmio_ref);
+                        top->eval();
+                        if (top->aclk && top->aresetn) {
+                            confreg.tick();
+                            mmio.beat(mmio_sigs_ref);
+                            mmio_sigs.update_output(mmio_ref);
+                            while (confreg_uart && confreg.has_uart()) printf("%c",confreg.get_uart());
+                        }
+                        if (trace_on) {
+                            vcd.dump(ticks);
+                            sim_time_end --;
+                        }
+                    }
+                }
+                else {
+                    if (cemu_mips.debug_wb_is_timer) {
+                        cemu_mips.set_GPR(cemu_mips.debug_wb_wnum, top->debug_wb_rf_wdata);
+                    }
+                    // printf("OK!\n");
+                    // printf("reference: PC = 0x%08x, wb_rf_wnum = 0x%02x, wb_rf_wdata = 0x%08x\n", cemu_mips.debug_wb_pc, cemu_mips.debug_wb_wnum, cemu_mips.debug_wb_wdata);
+                    // printf("mycpu    : PC = 0x%08x, wb_rf_wnum = 0x%02x, wb_rf_wdata = 0x%08x\n", top->debug_wb_pc, top->debug_wb_rf_wnum, top->debug_wb_rf_wdata);
+                }
+                last_commit = ticks;
+            }
+            if (ticks - last_commit >= commit_timeout) {
+                printf("ERROR: There are %lu cycles since last commit\n", commit_timeout);
+                running = false;
+            }
+            while (diff_uart && confreg.has_uart() && cemu_confreg.has_uart()) {
+                char mycpu_uart = confreg.get_uart();
+                char ref_uart = cemu_confreg.get_uart();
+                if (mycpu_uart != ref_uart) {
+                    printf("ERROR!\n UART different at %lu ticks.\n", ticks);
+                    printf("Expected: %08x, found: %08x\n", mycpu_uart, ref_uart);
+                    running = false;
+                }
+            }
+            // trace with cemu }
+            ticks ++;
+        }
+        if (trace_on) vcd.close();
+        printf("%x\n",confreg.get_num());
+    }
+    top->final();
+    printf("total ticks = %lu\n", ticks);
+}
 
 // void cemu_sys_diff(Vmycpu_top *top, axi4_ref <32,32,4> &mmio_ref) {
 //     // cemu {
@@ -1203,15 +1221,15 @@ int main(int argc, char** argv, char** env) {
         // case CEMU_FUNC:
         //     cemu_func();
         //     break;
-        // case CEMU_PERF_DIFF:
-        //     if (trace_on && perf_start != perf_end) {
-        //         printf("Warning: You should better set perf program.\n");
-        //     }
-        //     if (diff_uart) {
-        //         printf("diff uart is on\n");
-        //     }
-        //     cemu_perf_diff(top, mmio_ref, perf_start, perf_end);
-        //     break;
+        case CEMU_PERF_DIFF:
+            if (trace_on && perf_start != perf_end) {
+                printf("Warning: You should better set perf program.\n");
+            }
+            if (diff_uart) {
+                printf("diff uart is on\n");
+            }
+            cemu_perf_diff(top, mmio_ref, perf_start, perf_end);
+            break;
         // case CEMU_SYS_DIFF:
         //     cemu_sys_diff(top, mmio_ref);
         //     break;
